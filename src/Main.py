@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+# 페이스아이디 관련 코드는 https://github.com/codeingschool/Facial-Recognition 에서 가져왔습니다.
 import cv2
 import numpy as np
 from os import listdir
@@ -100,15 +100,17 @@ def faceId():
         return img,roi
 
     cap = cv2.VideoCapture(0)
+
+    unlockCount = 0
+    lockCount = 0
+    notCount = 0
+
     while True:
 
         ret, frame = cap.read()
 
         image, face = face_detector(frame)
 
-        unlockCount = 0
-        lockCount = 0
-        notCount = 0
         try:
             face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
             result = model.predict(face)
@@ -124,7 +126,7 @@ def faceId():
                 cv2.imshow('Face Cropper', image)
                 unlockCount += 1
                 lockCount = 0
-                if unlockCount > 5:
+                if unlockCount > 5: # 0.5초 동안 얼굴 매치가 성공하면
                     return 1
                 
 
@@ -132,7 +134,7 @@ def faceId():
                 cv2.putText(image, "Locked", (250, 450), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
                 cv2.imshow('Face Cropper', image)
                 lockCount += 1
-                if lockCount == 20:
+                if lockCount == 20: # 2초 동안 얼굴 매치가 안되면
                     return 0
 
 
@@ -140,7 +142,7 @@ def faceId():
             cv2.putText(image, "Face Not Found", (250, 450), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 0, 0), 2)
             cv2.imshow('Face Cropper', image)
             notCount += 1
-            if notCount > 70:
+            if notCount > 70: # 7초 동안 얼굴을 찾지 못했으면
                 return 2
             pass
 
@@ -175,61 +177,68 @@ faceRegisted = 0
 faceNotMatch = 0
 
 try:
-  while True:
-    switchVal = GPIO.input(SWITCH_PIN)
+    while True:
+        switchVal = GPIO.input(SWITCH_PIN)
 
-    now = datetime.datetime.now()
-    display.lcd_display_string(now.strftime("%x %X"), 1)
+        now = datetime.datetime.now()
+        display.lcd_display_string(now.strftime("%x %X"), 1)
 
 
-    time.sleep(0.1)
+        time.sleep(0.1)
 
-    if faceNotMatch == 3:
-        pwm.start(20)
-        time.sleep(5)
-        pwm.start(0)
-        faceNotMatch = 0
+        if faceNotMatch == 3:
+            pwm.start(20)
+            time.sleep(5)
+            pwm.start(0)
+            faceNotMatch = 0
 
-    # 버튼을 2초간 누르면 screenVal 값을 바꾼다.
-    if switchVal == 1:
-        while True:
-            switchCount += 0.1
-            if switchVal == 0:
-                if switchCount > 2:
-                    faceRegist()
-                    faceRegisted == 1
-                    break
-                else:
-                    if faceRegisted == 0:
-                        display.lcd_display_string("Please regist face", 1)
-                        time.sleep(2)
-                        break
+        # 버튼을 2초간 누르면 screenVal 값을 바꾼다.
+        if switchVal == 1:
+            while True:
+                switchVal = GPIO.input(SWITCH_PIN)
+                switchCount += 0.1
+                if switchVal == 0:
+                    if switchCount > 2:
+                        faceRegist()
+                        faceRegisted == 1
                     else:
-                        display.lcd_display_string("Detecting..", 1)
-                        time.sleep(0.1)
-                        if faceId() == 1:
-                            display.lcd_display_string("Unlock", 1)
-                            faceNotMatch = 0
-                            serPwm.ChangeDutyCycle(2.5) # 열림
-                            time.sleep(5)
-                            serPwm.ChangeDutyCycle(6)
-                            break
-                        if faceId() == 0:
-                            display.lcd_display_string("Not match", 1)
-                            faceNotMatch += 1
+                        if faceRegisted == 0:
+                            display.lcd_clear()
+                            display.lcd_display_string("Please regist", 1)
+                            display.lcd_display_string("the Face", 2)
                             time.sleep(2)
-                            break
-                        if faceId() == 2:
-                            display.lcd_display_string("Fail", 1)
-                            display.lcd_display_string("Try again", 2)
-                            time.sleep(2)
-                            break
-                switchCount = 0
-            time.sleep(0.1)
+                        else:
+                            display.lcd_clear()
+                            display.lcd_display_string("Detecting..", 1)
+                            time.sleep(0.1)
+                            if faceId() == 1: # 1: 인식 성공, 0: 매치 안됨, 2: 인식 안됨
+                                display.lcd_clear()
+                                display.lcd_display_string("Unlock", 1)
+                                faceNotMatch = 0
+                                serPwm.ChangeDutyCycle(2.5) # 열림
+                                time.sleep(5)
+                                serPwm.ChangeDutyCycle(6) # 닫힘
+                            elif faceId() == 0:
+                                display.lcd_clear()
+                                display.lcd_display_string("Not match", 1)
+                                faceNotMatch += 1
+                                time.sleep(2)
+                            elif faceId() == 2:
+                                display.lcd_clear()
+                                display.lcd_display_string("Face not found", 1)
+                                display.lcd_display_string("Try again", 2)
+                                time.sleep(2)
+                    switchCount = 0
+                    display.lcd_clear()
+                    break
+                time.sleep(0.1)
             
 
 
 finally:
-  print("cleaning up!")
-  display.lcd_clear()
+    display.lcd_clear()
+    GPIO.cleanup()
+    pwm.stop()
+    serPwm.stop()
+    print("cleaning up!")
   
