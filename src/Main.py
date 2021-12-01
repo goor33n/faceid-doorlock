@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import cv2
 import numpy as np
 from os import listdir
@@ -7,7 +9,7 @@ import time
 import datetime
 import RPi.GPIO as GPIO
 
-### 얼굴등록 ###
+#  얼굴등록
 def faceRegist():
     display.lcd_display_string("Please wait..", 1)
     face_classifier = cv2.CascadeClassifier('./xml/haarcascade_frontalface_default.xml')
@@ -155,12 +157,15 @@ def faceId():
 
 SWITCH_PIN = 4
 BUZZER_PIN = 20
+SERVO_PIN = 18
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(SWITCH_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(BUZZER_PIN, GPIO.OUT)
 
 pwm = GPIO.PWM(BUZZER_PIN, 430)
+serPwm = GPIO.PWM(SERVO_PIN, 50) # 서보 모터 pwm
+serPwm.start(6) # 서보 모터 실행 (6: 잠금, 2.5: 열림)
 
 display = drivers.Lcd()
 
@@ -205,7 +210,9 @@ try:
                         if faceId() == 1:
                             display.lcd_display_string("Unlock", 1)
                             faceNotMatch = 0
-                            time.sleep(2)
+                            serPwm.ChangeDutyCycle(2.5) # 열림
+                            time.sleep(5)
+                            serPwm.ChangeDutyCycle(6)
                             break
                         if faceId() == 0:
                             display.lcd_display_string("Not match", 1)
@@ -214,7 +221,7 @@ try:
                             break
                         if faceId() == 2:
                             display.lcd_display_string("Fail", 1)
-                            display.lcd_display_string("Please retry", 2)
+                            display.lcd_display_string("Try again", 2)
                             time.sleep(2)
                             break
                 switchCount = 0
