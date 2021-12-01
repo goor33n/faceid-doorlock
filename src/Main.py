@@ -183,6 +183,7 @@ try:
         pwm.start(20)
         time.sleep(5)
         pwm.start(0)
+        faceNotMatch = 0
 
     # 버튼을 2초간 누르면 screenVal 값을 바꾼다.
     if switchVal == 1:
