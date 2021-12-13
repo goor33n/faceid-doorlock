@@ -253,7 +253,7 @@ try:
                                 time.sleep(2)
                             
                     switchCount = 0  # 얼굴인식 작업이 끝나고 스위치가 눌린 시간 초기화
-                    display.lcd_clear() # 디스플레이 초기화
+                    display.lcd_clear() # 디스플레이 초기
                     break
                 time.sleep(0.1)
             
